@@ -262,3 +262,71 @@ class ItemEsteira {
         pop();
     }
 }
+
+// --- motor central do jogo ---
+class MotorJogo {
+    constructor() {
+        this.estado = 'MENU';
+        this.modo = 'VITAMINA';
+        this.pontuacao = 0;
+        this.combo = 0;
+        this.vidas = 3;
+        this.tempoRestante = 88; 
+        
+        this.velocidadeBase = 5.5;
+        this.velocidadeAtual = 5.5;
+        
+        this.pinguim = null;
+        this.itens = [];
+        this.particulas = [];
+        this.pedidoAtual = [];
+        this.temporizadorSurgimento = 0;
+        this.botoes = [];
+    }
+
+    inicializar(modo) {
+        this.modo = modo;
+        this.pontuacao = 0;
+        this.combo = 0;
+        this.tempoRestante = 88;
+        this.velocidadeAtual = this.velocidadeBase;
+        this.itens = [];
+        this.particulas = [];
+        this.pinguim = new Pinguim(); 
+        this.gerarPedido();
+        this.estado = 'JOGANDO';
+    }
+
+    atualizarVelocidadePorCombo() {
+        if (this.combo <= 5) {
+            this.velocidadeAtual = this.velocidadeBase;
+        } else if (this.combo <= 10) {
+            this.velocidadeAtual = this.velocidadeBase * 1.20; 
+        } else {
+            this.velocidadeAtual = this.velocidadeBase * 1.45; 
+        }
+    }
+
+    atualizar() {
+        if (this.estado !== 'JOGANDO') return;
+
+        this.pinguim.atualizar();
+
+        if (this.modo === 'VITAMINA' && frameCount % 60 === 0) {
+            this.tempoRestante--;
+            if (this.tempoRestante <= 0) { this.estado = 'FIM_DE_JOGO'; }
+        }
+
+        this.temporizadorSurgimento++;
+        let taxaSurgimentoAtual = max(45 - floor(this.velocidadeAtual * 2), 20);
+        if (this.temporizadorSurgimento > taxaSurgimentoAtual) {
+            this.temporizadorSurgimento = 0;
+            this.gerenciadorSurgimento();
+        }
+
+        for (let i = this.particulas.length - 1; i >= 0; i--) {
+            this.particulas[i].atualizar();
+            if (this.particulas[i].alfa <= 0) { this.particulas.splice(i, 1); }
+        }
+    }
+}

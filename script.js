@@ -261,72 +261,43 @@ class ItemEsteira {
         }
         pop();
     }
-}
 
-// --- motor central do jogo ---
-class MotorJogo {
-    constructor() {
-        this.estado = 'MENU';
-        this.modo = 'VITAMINA';
-        this.pontuacao = 0;
-        this.combo = 0;
-        this.vidas = 3;
-        this.tempoRestante = 88; 
-        
-        this.velocidadeBase = 5.5;
-        this.velocidadeAtual = 5.5;
-        
-        this.pinguim = null;
-        this.itens = [];
-        this.particulas = [];
+    gerarPedido() {
         this.pedidoAtual = [];
-        this.temporizadorSurgimento = 0;
-        this.botoes = [];
+        let tamanhos = [3, 4, 5];
+        let tamanho = random(tamanhos);
+        let chaves = Object.keys(MODELOS_FRUTA);
+        for (let i = 0; i < tamanho; i++) {
+            this.pedidoAtual.push(random(chaves));
+        }
     }
 
-    inicializar(modo) {
-        this.modo = modo;
-        this.pontuacao = 0;
-        this.combo = 0;
-        this.tempoRestante = 88;
-        this.velocidadeAtual = this.velocidadeBase;
-        this.itens = [];
-        this.particulas = [];
-        this.pinguim = new Pinguim(); 
-        this.gerarPedido();
-        this.estado = 'JOGANDO';
-    }
-
-    atualizarVelocidadePorCombo() {
-        if (this.combo <= 5) {
-            this.velocidadeAtual = this.velocidadeBase;
-        } else if (this.combo <= 10) {
-            this.velocidadeAtual = this.velocidadeBase * 1.20; 
+    gerenciadorSurgimento() {
+        let aleatorio = random(1);
+        if (this.modo === 'VITAMINA') {
+            if (aleatorio < 0.10 && this.combo >= 5) {
+                let relogio = new ItemEsteira('RELOGIO', false);
+                this.itens.push(relogio);
+            } else {
+                let alvo = this.pedidoAtual[0];
+                let criarCorreta = random(1) < 0.55;
+                let fruta = new ItemEsteira('FRUTA', criarCorreta);
+                if (criarCorreta && alvo) {
+                    fruta.nomeFruta = alvo;
+                }
+                this.itens.push(fruta);
+            }
         } else {
-            this.velocidadeAtual = this.velocidadeBase * 1.45; 
-        }
-    }
-
-    atualizar() {
-        if (this.estado !== 'JOGANDO') return;
-
-        this.pinguim.atualizar();
-
-        if (this.modo === 'VITAMINA' && frameCount % 60 === 0) {
-            this.tempoRestante--;
-            if (this.tempoRestante <= 0) { this.estado = 'FIM_DE_JOGO'; }
-        }
-
-        this.temporizadorSurgimento++;
-        let taxaSurgimentoAtual = max(45 - floor(this.velocidadeAtual * 2), 20);
-        if (this.temporizadorSurgimento > taxaSurgimentoAtual) {
-            this.temporizadorSurgimento = 0;
-            this.gerenciadorSurgimento();
-        }
-
-        for (let i = this.particulas.length - 1; i >= 0; i--) {
-            this.particulas[i].atualizar();
-            if (this.particulas[i].alfa <= 0) { this.particulas.splice(i, 1); }
+            if (aleatorio < 0.20) {
+                let bomba = new ItemEsteira('BOMBA', false);
+                this.itens.push(bomba);
+            } else if (aleatorio < 0.45) {
+                let bigorna = new ItemEsteira('BIGORNA', false);
+                this.itens.push(bigorna);
+            } else {
+                let frutaSobrevivencia = new ItemEsteira('FRUTA', false);
+                this.itens.push(frutaSobrevivencia);
+            }
         }
     }
 }

@@ -208,6 +208,31 @@ class ItemEsteira {
         if (this.posicao.x < -100 || this.posicao.y > height + 100) {
             this.ativo = false;
         }
+
+        let colidiuComItemNesseFrame = false;
+
+        for (let i = this.itens.length - 1; i >= 0; i--) {
+            let item = this.itens[i];
+            item.atualizar();
+
+            if (!item.ativo) {
+                this.itens.splice(i, 1);
+                continue;
+            }
+
+            let d = dist(this.pinguim.posicao.x, this.pinguim.posicao.y - 35, item.posicao.x, item.posicao.y - 15);
+            
+            if (d < (item.raio + 35)) {
+                this.dispararColisao(item);
+                this.itens.splice(i, 1);
+                colidiuComItemNesseFrame = true; 
+            }
+        }
+
+        if (!colidiuComItemNesseFrame && this.pinguim.posicao.y >= this.pinguim.esteiraY) {
+            this.pinguim.forçarQuiqueEsteira();
+            this.lidarFalhaChao();
+        }
     }
 
     desenhar() {
@@ -298,6 +323,72 @@ class ItemEsteira {
                 let frutaSobrevivencia = new ItemEsteira('FRUTA', false);
                 this.itens.push(frutaSobrevivencia);
             }
+        }
+    }
+
+    lidarFalhaChao() {
+        this.combo = 0;
+        this.atualizarVelocidadePorCombo(); 
+        
+        if (this.modo === 'SOBREVIVENCIA') {
+            this.vidas--;
+            if (this.vidas <= 0) { this.estado = 'FIM_DE_JOGO'; }
+        } else {
+            this.tempoRestante = max(0, this.tempoRestante - 15); 
+        }
+    }
+
+    dispararColisao(item) {
+        if (item.tipo === 'FRUTA') {
+            let informacao = MODELOS_FRUTA[item.nomeFruta];
+            
+            for (let p = 0; p < 18; p++) {
+                this.particulas.push(new ParticulaSuco(item.posicao.x, item.posicao.y - 15, informacao.cor));
+            }
+
+            this.pinguim.pular(); 
+
+            if (this.modo === 'VITAMINA') {
+                if (item.nomeFruta === this.pedidoAtual[0]) {
+                    this.combo++;
+                    this.atualizarVelocidadePorCombo();
+                    this.pontuacao += min(this.combo, 5) * 10;
+                    this.pedidoAtual.shift();
+                    
+                    if (this.pedidoAtual.length === 0) {
+                        this.pontuacao += 100; 
+                        this.gerarPedido();
+                    }
+                } else {
+                    this.combo = 0;
+                    this.atualizarVelocidadePorCombo();
+                    this.pinguim.temporizadorAtordoado = 25; 
+                    this.pinguim.tipoErroAtual = "FRUTA_ERRADA";
+                }
+            } else {
+                this.combo++;
+                this.atualizarVelocidadePorCombo();
+                this.pontuacao += min(this.combo, 5) * 10;
+                if (this.combo % 4 === 0 && this.vidas < 5) { this.vidas++; }
+            }
+        } 
+        else if (item.tipo === 'BOMBA' || item.tipo === 'BIGORNA') {
+            this.combo = 0;
+            this.atualizarVelocidadePorCombo();
+            this.pinguim.temporizadorAtordoado = 40;
+            this.pinguim.tipoErroAtual = "OBSTACULO";
+            this.pinguim.velocidade.y = -8; 
+
+            if (this.modo === 'SOBREVIVENCIA') {
+                this.vidas--;
+                if (this.vidas <= 0) { this.estado = 'FIM_DE_JOGO'; }
+            } else {
+                this.tempoRestante = max(0, this.tempoRestante - 10);
+            }
+        } 
+        else if (item.tipo === 'RELOGIO') {
+            this.tempoRestante += 10;
+            this.pinguim.pular(); 
         }
     }
 }

@@ -149,3 +149,116 @@ class Pinguim {
         pop();
     }
 }
+
+// --- classe dos itens da esteira (frutas grandes e bigornas com fisica) ---
+class ItemEsteira {
+    constructor(tipo, ehAlvo) {
+        this.tipo = tipo;
+        this.nomeFruta = null;
+        if (tipo === 'FRUTA') {
+            let chaves = Object.keys(MODELOS_FRUTA);
+            this.nomeFruta = random(chaves);
+        }
+        
+        this.ativo = true;
+        this.pulsacao = 0;
+        this.ehAlvo = ehAlvo ? true : false;
+        
+        if (tipo === 'FRUTA' && this.nomeFruta) {
+            this.raio = MODELOS_FRUTA[item.nomeFruta]?.raio || 32; // gambiarra pro jogo nao travar se nao tiver o modelo da fruta
+            if (MODELOS_FRUTA[this.nomeFruta]) this.raio = MODELOS_FRUTA[this.nomeFruta].raio;
+        } else {
+            this.raio = 32;
+        }
+
+        this.esteiraY = height * 0.52;
+        if (this.tipo === 'BIGORNA') {
+            this.posicao = createVector(width + 50, height * 0.1); 
+            this.velocidade = createVector(-jogo.velocidadeAtual * 0.6, 0); 
+            this.gravidade = 0.4;
+            this.contagemQuiques = 0;
+        } else {
+            this.posicao = createVector(width + 60, this.esteiraY);
+        }
+    }
+
+    atualizar() {
+        this.pulsacao += 0.15;
+
+        if (this.tipo === 'BIGORNA') {
+            this.velocidade.y += this.gravidade;
+            this.posicao.add(this.velocidade);
+            this.posicao.x -= jogo.velocidadeAtual * 0.4; 
+
+            if (this.posicao.y >= this.esteiraY) {
+                this.posicao.y = this.esteiraY;
+                this.velocidade.y = -this.velocidade.y * 0.65; 
+                this.velocidade.y += random(-1.5, 1.5); 
+                this.contagemQuiques++;
+                
+                if (this.contagemQuiques > 3 || abs(this.velocidade.y) < 1.5) {
+                    this.velocidade.y = 0;
+                    this.gravidade = 0;
+                }
+            }
+        } else {
+            this.posicao.x -= jogo.velocidadeAtual;
+        }
+
+        if (this.posicao.x < -100 || this.posicao.y > height + 100) {
+            this.ativo = false;
+        }
+    }
+
+    desenhar() {
+        push();
+        translate(this.posicao.x, this.posicao.y);
+        stroke('#10141d');
+        strokeWeight(4);
+
+        if (this.tipo === 'FRUTA' && this.nomeFruta) {
+            let informacao = MODELOS_FRUTA[this.nomeFruta];
+            
+            if (this.ehAlvo) {
+                push();
+                noFill();
+                stroke(255);
+                strokeWeight(6 + sin(this.pulsacao) * 3);
+                ellipse(0, -this.raio/2, this.raio * 2.3);
+                pop();
+            }
+
+            fill(informacao.cor);
+            if (informacao.tipo === 'morango') {
+                triangle(-this.raio, -this.raio*1.2, this.raio, -this.raio*1.2, 0, 5);
+                fill(informacao.corFolha); ellipse(0, -this.raio*1.2, this.raio*1.2, 12);
+            } else if (informacao.tipo === 'banana') {
+                arc(0, -this.raio/2, this.raio * 2, this.raio * 1.3, 0, PI, OPEN);
+            } else if (informacao.tipo === 'uva') {
+                ellipse(-10, -18, 22); ellipse(10, -18, 22);
+                ellipse(0, -10, 24);  ellipse(0, 0, 20);
+            } else {
+                ellipse(0, -this.raio/2, this.raio * 2, this.raio * 1.9);
+                fill(informacao.corFolha); rect(-3, -this.raio - 8, 6, 10);
+            }
+        }
+        else if (this.tipo === 'BOMBA') {
+            fill('#222222'); ellipse(0, -20, 56);
+            fill('#e74c3c'); rect(-5, -50, 10, 6);
+            stroke('#f1c40f'); strokeWeight(3); line(0, -50, 12, -62);
+        }
+        else if (this.tipo === 'BIGORNA') {
+            fill('#555555');
+            rectMode(CENTER);
+            rect(0, 0, 75, 28, 4);
+            quad(-30, -14, 30, -14, 20, -40, -20, -40);
+            rect(0, -45, 90, 18, 2);
+        }
+        else if (this.tipo === 'RELOGIO') {
+            fill('#ffffff'); stroke('#f1c40f'); strokeWeight(5);
+            ellipse(0, -25, 48);
+            stroke(0); strokeWeight(2.5); line(0, -25, 0, -40); line(0, -25, 10, -25);
+        }
+        pop();
+    }
+}

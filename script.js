@@ -28,3 +28,30 @@ function windowResized() {
 function mousePressed() {
     jogo.lidarCliqueMouse();
 }
+
+// --- sistema de particulas ---
+class ParticulaSuco {
+    constructor(x, y, cor) {
+        this.posicao = createVector(x, y);
+        this.velocidade = p5.Vector.random2D().mult(random(3, 8));
+        this.velocidade.y -= random(2, 5);
+        this.cor = cor;
+        this.tamanho = random(8, 14);
+        this.gravidade = 0.25;
+        this.alfa = 255;
+    }
+    atualizar() {
+        this.velocidade.y += this.gravidade;
+        this.posicao.add(this.velocidade);
+        this.alfa -= 7;
+    }
+    desenhar() {
+        push();
+        noStroke();
+        let c = color(this.cor);
+        c.setAlpha(this.alfa);
+        fill(c);
+        ellipse(this.posicao.x, this.posicao.y, this.tamanho);
+        pop();
+    }
+}

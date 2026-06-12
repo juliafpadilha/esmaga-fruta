@@ -391,4 +391,196 @@ class ItemEsteira {
             this.pinguim.pular(); 
         }
     }
+
+    renderizar() {
+        background('#d35400');
+        fill('#ba4a00'); noStroke(); rect(0, height * 0.4, width, height * 0.6);
+        stroke('#a04000'); strokeWeight(4);
+        for (let x = 40; x < width; x += 120) { line(x, 0, x, height * 0.4); }
+
+        stroke('#10141d'); strokeWeight(5); fill('#2980b9');
+        rect(-10, -10, 75, height * 0.35, 0, 0, 15, 0); 
+        fill('#3498db'); rect(width - 65, -10, 75, height * 0.35, 0, 0, 0, 15);
+
+        stroke('#2c3e50'); strokeWeight(2); line(width*0.2, 0, width*0.2, 50); line(width*0.8, 0, width*0.8, 50);
+        stroke('#10141d'); strokeWeight(4); fill('#f39c12'); ellipse(width*0.2, 75, 45, 45); ellipse(width*0.8, 75, 45, 45);
+
+        rectMode(CORNER);
+        fill('#4b5563'); stroke('#10141d'); strokeWeight(6);
+        rect(-10, height * 0.52, width + 20, 45); 
+        fill('#1f2937'); noStroke();
+        rect(0, height * 0.53, width, 30);
+        
+        stroke('#374151'); strokeWeight(6);
+        let deslocamentoX = (millis() * (this.velocidadeAtual / 15)) % 60;
+        for (let x = width + 60 - deslocamentoX; x > -60; x -= 60) {
+            line(x, height * 0.53, x - 15, height * 0.57);
+        }
+
+        this.desenharCesta(95, height * 0.48);
+        this.desenharCesta(width - 130, height * 0.48);
+
+        if (this.estado === 'JOGANDO') {
+            this.itens.forEach(item => item.desenhar());
+            this.pinguim.desenhar();
+            this.particulas.forEach(p => p.desenhar());
+            this.desenharInterface();
+        } else if (this.estado === 'MENU') { this.renderizarMenu(); }
+        else if (this.estado === 'SOBRE') { this.renderizarSobre(); }
+        else if (this.estado === 'FIM_DE_JOGO') { this.renderizarFimJogo(); }
+    }
+
+    desenharCesta(x, y) {
+        push(); translate(x, y); stroke('#10141d'); strokeWeight(3.5); fill('#d35400'); ellipse(0, -25, 50, 20);
+        fill('#e67e22'); arc(0, -10, 60, 40, 0, PI, CHORD); pop();
+    }
+
+    desenharInterface() {
+        push();
+        translate(width / 2, 60);
+        rectMode(CENTER); stroke('#4a2711'); strokeWeight(6); fill('#874c24'); rect(0, 0, 160, 65, 10);
+        stroke('#10141d'); strokeWeight(3); fill('#f5f6fa'); rect(0, 0, 140, 48, 6);
+        
+        let m = floor(this.tempoRestante / 60); let s = this.tempoRestante % 60;
+        let textoRelogio = this.modo === 'VITAMINA' ? `${m}:${s < 10 ? '0' : ''}${s}` : "∞";
+        fill('#2f3640'); textStyle(BOLD); textSize(26); textAlign(CENTER, CENTER);
+        text(textoRelogio, 0, 2);
+        pop();
+
+        let painelY = height - 100;
+        push(); translate(width - 240, painelY);
+        noFill(); stroke('#1f2937'); strokeWeight(20); arc(100, 50, 120, 120, PI, TWO_PI);
+        let cores = ['#2ecc71', '#2ecc71', '#f1c40f', '#f39c12', '#e67e22', '#e74c3c'];
+        stroke(cores[min(this.combo, 5)]);
+        arc(100, 50, 120, 120, PI, PI + (TWO_PI - PI) * (min(this.combo, 5) / 5));
+        rectMode(CENTER); noStroke(); fill('#10141d'); rect(100, 50, 40, 30, 4);
+        fill(255); textSize(16); textAlign(CENTER, CENTER); text(`${this.combo}x`, 100, 50);
+        pop();
+
+        fill('#5c3a21'); stroke('#10141d'); strokeWeight(4); rect(40, height - 85, 180, 55, 8);
+        fill(255); noStroke(); textSize(18); textAlign(CENTER, CENTER); text(`PONTOS: ${this.pontuacao}`, 130, height - 58);
+
+        if (this.modo === 'SOBREVIVENCIA') {
+            for (let i = 0; i < 5; i++) {
+                fill(i < this.vidas ? '#e74c3c' : '#bdc3c7');
+                ellipse(45 + (i * 26), 40, 18, 18);
+            }
+        }
+
+        if (this.modo === 'VITAMINA' && this.pedidoAtual.length > 0) {
+            let larguraBandeja = this.pedidoAtual.length * 65 + 40;
+            let bandejaX = width / 2 - larguraBandeja / 2;
+            fill('#eed9c4'); stroke('#5c3a21'); strokeWeight(5); rect(bandejaX, height - 95, larguraBandeja, 75, 12);
+
+            for (let i = 0; i < this.pedidoAtual.length; i++) {
+                let nomeF = this.pedidoAtual[i];
+                let cartaoX = bandejaX + 35 + (i * 65);
+                let cartaoY = height - 58;
+
+                if (i === 0) {
+                    stroke('#f1c40f'); strokeWeight(4); fill('#ffffff');
+                    rectMode(CENTER); rect(cartaoX, cartaoY - 10, 52, 58, 5); 
+                } else {
+                    stroke('#10141d'); strokeWeight(2); fill('#f5f6fa');
+                    rectMode(CENTER); rect(cartaoX, cartaoY, 46, 50, 5);
+                }
+                noStroke(); fill(MODELOS_FRUTA[nomeF].cor);
+                ellipse(cartaoX, i === 0 ? cartaoY - 10 : cartaoY, 26);
+            }
+        }
+
+        if (this.pinguim.temporizadorAtordoado > 0) {
+            let msg = "ERRO DE RECEITA! FRUTA ERRADA!";
+            let corPainel = 'rgba(231, 76, 60, 0.85)';
+            
+            if (this.pinguim.tipoErroAtual === "ESTEIRA") {
+                msg = "QUEDA DA ESTEIRA! RESET DE COMBO!";
+                corPainel = 'rgba(192, 57, 43, 0.9)';
+            } else if (this.pinguim.tipoErroAtual === "OBSTACULO") {
+                msg = "CUIDADO COM OS OBSTÁCULOS!";
+                corPainel = 'rgba(211, 84, 0, 0.85)';
+            }
+            
+            fill(corPainel); rect(0, height / 2 - 40, width, 80);
+            fill('#ffffff'); textSize(28); textAlign(CENTER, CENTER); textStyle(BOLD);
+            text(msg, width / 2, height / 2);
+        }
+    }
+
+    renderizarMenu() {
+        fill('rgba(16, 20, 29, 0.8)'); rect(0, 0, width, height);
+        textAlign(CENTER, CENTER); textStyle(BOLD); fill('#f1c40f'); textSize(60);
+        text("ESMAGA FRUTA", width / 2, height * 0.25);
+        fill(255); textSize(18); textStyle(ITALIC); text("Regras Avançadas: O chão é lava! Use as frutas como plataformas.", width / 2, height * 0.33);
+
+        this.botoes = [
+            { id: 'VITAMINA', texto: 'Modo Vitamina (Smoothies)', x: width/2 - 175, y: height*0.46, w: 350, h: 55 },
+            { id: 'SOBREVIVENCIA', texto: 'Modo Frutada (Sobrevivência)', x: width/2 - 175, y: height*0.58, w: 350, h: 55 },
+            { id: 'SOBRE', texto: 'Créditos / Integrantes', x: width/2 - 175, y: height*0.70, w: 350, h: 55 }
+        ];
+        this.desenharBotoesInterface();
+    }
+
+    renderizarSobre() {
+        fill('rgba(16, 20, 29, 0.92)'); rect(0, 0, width, height);
+        textAlign(CENTER, CENTER); fill(255); textSize(32); textStyle(BOLD);
+        text("REGRAS DA FÁBRICA DE SMOOTHIES", width / 2, height * 0.16);
+        textSize(18); textStyle(NORMAL);
+        
+        let linhas = [
+            "Controles e Mecânicas:",
+            "• [Seta para Cima / W]: Segure no ar para planar",
+            "• [Seta para Baixo / S]: Pressione no ar para descer com velocidade",
+            "• [Setas Laterais / A, D]: Movimentação horizontal",
+            "PROIBIDO TOCAR NA ESTEIRA! Pular diretamente nela reseta combo e tira vida.",
+            "Apenas frutas servem como plataformas seguras de rebatimento automático!",
+            "",
+            "Esmaga Fruta - Feito por:",
+            "Julia Ferreira Padilha :)"
+        ];
+        
+        for (let i = 0; i < linhas.length; i++) {
+            let l = linhas[i];
+            if (l.indexOf("PROIBIDO") !== -1) { fill('#e74c3c'); }
+            else if (l.indexOf("•") !== -1) { fill('#f1c40f'); }
+            else { fill(255); }
+            text(l, width / 2, height * 0.28 + (i * 32));
+        }
+
+        this.botoes = [ { id: 'VOLTAR', texto: 'Voltar ao Menu', x: width/2 - 125, y: height*0.82, w: 250, h: 50 } ];
+        this.desenharBotoesInterface();
+    }
+
+    renderizarFimJogo() {
+        fill('rgba(0, 0, 0, 0.9)'); rect(0, 0, width, height);
+        textAlign(CENTER, CENTER); fill('#e74c3c'); textSize(60); textStyle(BOLD);
+        text("TURNO ENCERRADO!", width / 2, height * 0.35);
+        fill(255); textSize(24); textStyle(NORMAL); text("Pontos Finais Totais: " + this.pontuacao, width / 2, height * 0.48);
+
+        this.botoes = [ { id: 'VOLTAR', texto: 'Voltar ao Menu Principal', x: width/2 - 150, y: height*0.65, w: 300, h: 55 } ];
+        this.desenharBotoesInterface();
+    }
+
+    desenharBotoesInterface() {
+        rectMode(CORNER); textStyle(BOLD); textSize(18);
+        for (let i = 0; i < this.botoes.length; i++) {
+            let b = this.botoes[i];
+            let focoMouse = (mouseX > b.x && mouseX < b.x + b.w && mouseY > b.y && mouseY < b.y + b.h);
+            stroke('#ffffff'); strokeWeight(2.5); 
+            if (focoMouse) { fill('#e67e22'); } else { fill('#d35400'); }
+            rect(b.x, b.y, b.w, b.h, 8); noStroke(); fill(255); text(b.texto, b.x + b.w / 2, b.y + b.h / 2);
+        }
+    }
+
+    lidarCliqueMouse() {
+        for (let i = 0; i < this.botoes.length; i++) {
+            let b = this.botoes[i];
+            if (mouseX > b.x && mouseX < b.x + b.w && mouseY > b.y && mouseY < b.y + b.h) {
+                if (b.id === 'VITAMINA') this.inicializar('VITAMINA');
+                else if (b.id === 'SOBREVIVENCIA') this.inicializar('SOBREVIVENCIA');
+                else if (b.id === 'SOBRE') this.estado = 'SOBRE';
+                else if (b.id === 'VOLTAR') this.estado = 'MENU';
+            }
+        }
+    }
 }

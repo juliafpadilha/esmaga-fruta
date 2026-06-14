@@ -4,7 +4,7 @@ let MODELOS_FRUTA;
 function setup() {
     createCanvas(windowWidth, windowHeight);
     
-    // definicoes visuais
+    // definições visuais
     MODELOS_FRUTA = {
         'Morango': { cor: '#ff2a4b', corFolha: '#2ecc71', tipo: 'morango', raio: 32 },
         'Banana':  { cor: '#f1c40f', corFolha: '#d35400', tipo: 'banana', raio: 35 },
@@ -56,7 +56,7 @@ class ParticulaSuco {
     }
 }
 
-// --- classe do jogador (pinguim com flutuacao e queda rapida!) ---
+// --- classe do jogador ---
 class Pinguim {
     constructor() {
         this.esteiraY = height * 0.52; 
@@ -70,7 +70,7 @@ class Pinguim {
         
         this.tamanho = 75;
         this.temporizadorAtordoado = 0; 
-        this.tipoErroAtual = ""; // guarda se foi "ESTEIRA" ou "FRUTA_ERRADA"
+        this.tipoErroAtual = ""; 
         this.escalaImpactoX = 1.0;
         this.escalaImpactoY = 1.0;
         
@@ -111,7 +111,7 @@ class Pinguim {
         this.posicao.x = constrain(this.posicao.x, 80, width - 80);
     }
 
-    forçarQuiqueEsteira() {
+    forcarQuiqueEsteira() {
         this.posicao.y = this.esteiraY - 12;
         this.velocidade.y = -9; 
         this.temporizadorAtordoado = 30; 
@@ -150,7 +150,7 @@ class Pinguim {
     }
 }
 
-// --- classe dos itens da esteira (frutas grandes e bigornas com fisica) ---
+// --- classe dos itens da esteira ---
 class ItemEsteira {
     constructor(tipo, ehAlvo) {
         this.tipo = tipo;
@@ -165,8 +165,7 @@ class ItemEsteira {
         this.ehAlvo = ehAlvo ? true : false;
         
         if (tipo === 'FRUTA' && this.nomeFruta) {
-            this.raio = MODELOS_FRUTA[item.nomeFruta]?.raio || 32; // gambiarra pro jogo nao travar se nao tiver o modelo da fruta
-            if (MODELOS_FRUTA[this.nomeFruta]) this.raio = MODELOS_FRUTA[this.nomeFruta].raio;
+            this.raio = MODELOS_FRUTA[this.nomeFruta]?.raio || 32; 
         } else {
             this.raio = 32;
         }
@@ -207,31 +206,6 @@ class ItemEsteira {
 
         if (this.posicao.x < -100 || this.posicao.y > height + 100) {
             this.ativo = false;
-        }
-
-        let colidiuComItemNesseFrame = false;
-
-        for (let i = this.itens.length - 1; i >= 0; i--) {
-            let item = this.itens[i];
-            item.atualizar();
-
-            if (!item.ativo) {
-                this.itens.splice(i, 1);
-                continue;
-            }
-
-            let d = dist(this.pinguim.posicao.x, this.pinguim.posicao.y - 35, item.posicao.x, item.posicao.y - 15);
-            
-            if (d < (item.raio + 35)) {
-                this.dispararColisao(item);
-                this.itens.splice(i, 1);
-                colidiuComItemNesseFrame = true; 
-            }
-        }
-
-        if (!colidiuComItemNesseFrame && this.pinguim.posicao.y >= this.pinguim.esteiraY) {
-            this.pinguim.forçarQuiqueEsteira();
-            this.lidarFalhaChao();
         }
     }
 
@@ -286,7 +260,53 @@ class ItemEsteira {
         }
         pop();
     }
+}
 
+// --- motor central do jogo ---
+class MotorJogo {
+    constructor() {
+        this.estado = 'MENU';
+        this.modo = 'VITAMINA';
+        this.pontuacao = 0;
+        this.combo = 0;
+        this.vidas = 3;
+        this.tempoRestante = 88; 
+        
+        this.velocidadeBase = 5.5;
+        this.velocidadeAtual = 5.5;
+        
+        this.pinguim = null;
+        this.itens = [];
+        this.particulas = [];
+        this.pedidoAtual = [];
+        this.temporizadorSurgimento = 0;
+        this.botoes = [];
+    }
+
+    inicializar(modo) {
+        this.modo = modo;
+        this.pontuacao = 0;
+        this.combo = 0;
+        this.vidas = 3;
+        this.tempoRestante = 88;
+        this.velocidadeAtual = this.velocidadeBase;
+        this.itens = [];
+        this.particulas = [];
+        this.pinguim = new Pinguim(); 
+        this.gerarPedido();
+        this.estado = 'JOGANDO';
+    }
+
+    atualizarVelocidadePorCombo() {
+        if (this.combo <= 5) {
+            this.velocidadeAtual = this.velocidadeBase;
+        } else if (this.combo <= 10) {
+            this.velocidadeAtual = this.velocidadeBase * 1.20; 
+        } else {
+            this.velocidadeAtual = this.velocidadeBase * 1.45; 
+        }
+    }
+    
     gerarPedido() {
         this.pedidoAtual = [];
         let tamanhos = [3, 4, 5];
@@ -323,6 +343,57 @@ class ItemEsteira {
                 let frutaSobrevivencia = new ItemEsteira('FRUTA', false);
                 this.itens.push(frutaSobrevivencia);
             }
+        }
+    }
+
+    atualizar() {
+        if (this.estado !== 'JOGANDO') return;
+
+        this.pinguim.atualizar();
+
+        if (this.modo === 'VITAMINA' && frameCount % 60 === 0) {
+            this.tempoRestante--;
+            if (this.tempoRestante <= 0) { this.estado = 'FIM_DE_JOGO'; }
+        }
+
+        this.temporizadorSurgimento++;
+        let taxaSurgimentoAtual = max(45 - floor(this.velocidadeAtual * 2), 20);
+        if (this.temporizadorSurgimento > taxaSurgimentoAtual) {
+            this.temporizadorSurgimento = 0;
+            this.gerenciadorSurgimento();
+        }
+
+        // aualiza partículas de suco
+        for (let i = this.particulas.length - 1; i >= 0; i--) {
+            this.particulas[i].atualizar();
+            if (this.particulas[i].alfa <= 0) { this.particulas.splice(i, 1); }
+        }
+
+        // --- loop de colisão centralizado ---
+        let colidiuComItemNesseFrame = false;
+
+        for (let i = this.itens.length - 1; i >= 0; i--) {
+            let item = this.itens[i];
+            item.atualizar();
+
+            if (!item.ativo) {
+                this.itens.splice(i, 1);
+                continue;
+            }
+
+            let d = dist(this.pinguim.posicao.x, this.pinguim.posicao.y - 35, item.posicao.x, item.posicao.y - 15);
+            
+            if (d < (item.raio + 35)) {
+                this.dispararColisao(item);
+                this.itens.splice(i, 1);
+                colidiuComItemNesseFrame = true; 
+            }
+        }
+
+        // vê se o pinguim caiu na esteira sem rebater em nada
+        if (!colidiuComItemNesseFrame && this.pinguim.posicao.y >= this.pinguim.esteiraY) {
+            this.pinguim.forcarQuiqueEsteira();
+            this.lidarFalhaChao();
         }
     }
 

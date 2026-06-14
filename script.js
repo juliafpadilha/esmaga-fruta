@@ -1,16 +1,47 @@
 let jogo;
 let MODELOS_FRUTA;
 
+// variáveis para os novos assets
+let imgPinguim;
+let imgWallpaper;
+let imgBotao;
+let imgBomba;
+let imgBigorna;
+let imgsFrutas = {};
+let musicaJogo;
+
+function preload() {
+    console.log("Iniciando carregamento simplificado dos assets em ./src/...");
+
+    imgPinguim = loadImage('./src/pinguim.png');
+    imgWallpaper = loadImage('./src/wallpaper.png');
+    imgBotao = loadImage('./src/botao_base.png');
+    imgBomba = loadImage('./src/bomba.png');
+    imgBigorna = loadImage('./src/bigorna.png');
+    
+    if (typeof imgsFrutas === 'undefined' || imgsFrutas === null) {
+        imgsFrutas = {};
+    }
+
+    imgsFrutas['Morango'] = loadImage('./src/morango.png');
+    imgsFrutas['Banana'] = loadImage('./src/banana.png');
+    imgsFrutas['Uva'] = loadImage('./src/uva.png');
+    imgsFrutas['Laranja'] = loadImage('./src/laranja.png');
+    imgsFrutas['Maçã'] = loadImage('./src/maca.png');
+}
+
 function setup() {
     createCanvas(windowWidth, windowHeight);
     
-    // definições visuais
+    textFont('Fredoka');
+    textStyle(BOLD);
+    
     MODELOS_FRUTA = {
-        'Morango': { cor: '#ff2a4b', corFolha: '#2ecc71', tipo: 'morango', raio: 32 },
-        'Banana':  { cor: '#f1c40f', corFolha: '#d35400', tipo: 'banana', raio: 35 },
-        'Uva':     { cor: '#8e44ad', corFolha: '#27ae60', tipo: 'uva', raio: 30 },
-        'Laranja': { cor: '#e67e22', corFolha: '#27ae60', tipo: 'laranja', raio: 32 },
-        'Maçã':    { cor: '#2ed573', corFolha: '#26af50', tipo: 'maca', raio: 32 }
+        'Morango': { cor: '#ff2a4b', tipo: 'morango', raio: 46 },
+        'Banana':  { cor: '#f1c40f', tipo: 'banana', raio: 50 },
+        'Uva':     { cor: '#8e44ad', tipo: 'uva', raio: 44 },
+        'Laranja': { cor: '#e67e22', tipo: 'laranja', raio: 46 },
+        'Maçã':    { cor: '#2ed573', tipo: 'maca', raio: 46 }
     };
 
     jogo = new MotorJogo();
@@ -29,7 +60,47 @@ function mousePressed() {
     jogo.lidarCliqueMouse();
 }
 
-// --- sistema de particulas ---
+function desenharTexto(texto, x, y, tamanho, alinharX = CENTER, alinharY = CENTER) {
+    push();
+    textSize(tamanho);
+    textAlign(alinharX, alinharY);
+    
+    fill('#4A3526');
+    noStroke();
+    text(texto, x + 2, y + 2);
+    
+    stroke('#6B4F3A');
+    strokeWeight(tamanho * 0.15);
+    strokeJoin(ROUND);
+    
+    fill('#FFF7E8');
+    text(texto, x, y);
+    pop();
+}
+
+// desenha o formato de coração pra vida
+function desenharCoracao(x, y, tamanho) {
+    push();
+    translate(x, y);
+    
+    // metade esquerda do coração
+    beginShape();
+    vertex(0, -tamanho * 0.25);
+    bezierVertex(-tamanho * 0.5, -tamanho * 0.75, -tamanho, -tamanho * 0.25, -tamanho * 0.05, tamanho * 0.45);
+    vertex(0, tamanho * 0.55);
+    endShape(CLOSE);
+    
+    // metade direita espelhada no eixo X
+    scale(-1, 1);
+    beginShape();
+    vertex(0, -tamanho * 0.25);
+    bezierVertex(-tamanho * 0.5, -tamanho * 0.75, -tamanho, -tamanho * 0.25, -tamanho * 0.05, tamanho * 0.45);
+    vertex(0, tamanho * 0.55);
+    endShape(CLOSE);
+    
+    pop();
+}
+
 class ParticulaSuco {
     constructor(x, y, cor) {
         this.posicao = createVector(x, y);
@@ -56,11 +127,12 @@ class ParticulaSuco {
     }
 }
 
-// --- classe do jogador ---
 class Pinguim {
     constructor() {
-        this.esteiraY = height * 0.52; 
-        this.posicao = createVector(width * 0.25, this.esteiraY - 120); 
+        this.esteiraY = height * 0.70; 
+        this.largura = 130;
+        this.altura = 130;
+        this.posicao = createVector(width * 0.25, this.esteiraY - 100); 
         this.velocidade = createVector(0, 0);
         
         this.gravidadeBase = 0.5;
@@ -68,7 +140,8 @@ class Pinguim {
         this.forcaQuedaRapida = 1.2;  
         this.forcaPulo = -13;         
         
-        this.tamanho = 75;
+        this.raioHitbox = 55; 
+        
         this.temporizadorAtordoado = 0; 
         this.tipoErroAtual = ""; 
         this.escalaImpactoX = 1.0;
@@ -79,11 +152,12 @@ class Pinguim {
 
     pular() {
         this.velocidade.y = this.forcaPulo;
-        this.escalaImpactoY = 1.3;
-        this.escalaImpactoX = 0.8;
+        this.escalaImpactoY = 1.2;
+        this.escalaImpactoX = 0.85;
     }
 
     atualizar() {
+        this.esteiraY = height * 0.70; 
         if (this.temporizadorAtordoado > 0) {
             this.temporizadorAtordoado--;
         }
@@ -112,45 +186,28 @@ class Pinguim {
     }
 
     forcarQuiqueEsteira() {
-        this.posicao.y = this.esteiraY - 12;
+        this.posicao.y = this.esteiraY - 5;
         this.velocidade.y = -9; 
         this.temporizadorAtordoado = 30; 
         this.tipoErroAtual = "ESTEIRA";
-        this.escalaImpactoY = 0.6;
-        this.escalaImpactoX = 1.3;
+        this.escalaImpactoY = 0.7;
+        this.escalaImpactoX = 1.2;
     }
 
     desenhar() {
         push();
-        translate(this.posicao.x, this.posicao.y);
+        translate(this.posicao.x, this.posicao.y - this.altura / 2);
         scale(this.escalaImpactoX, this.escalaImpactoY);
         
-        stroke('#10141d');
-        strokeWeight(4);
-
-        if (this.temporizadorAtordoado > 0) {
-            fill('#7f8c8d'); 
-        } else {
-            fill('#0052a3');
+        imageMode(CENTER);
+        if (this.temporizadorAtordoado > 0 && tint) {
+            tint(180, 180, 200, 255);
         }
-
-        ellipse(0, -this.tamanho/2, this.tamanho, this.tamanho * 1.1);
-        fill('#ffffff'); noStroke();
-        ellipse(0, -this.tamanho/2 + 5, this.tamanho * 0.7, this.tamanho * 0.8);
-        
-        fill('#27ae60'); stroke('#10141d'); rectMode(CENTER);
-        rect(0, -this.tamanho/3, this.tamanho * 0.5, this.tamanho * 0.4, 4);
-
-        fill('#f39c12');
-        triangle(-12, -this.tamanho/2 - 2, 12, -this.tamanho/2 - 2, 0, -this.tamanho/2 + 8);
-        fill(0); noStroke();
-        ellipse(-8, -this.tamanho/2 - 12, 6, 8);
-        ellipse(8, -this.tamanho/2 - 12, 6, 8);
+        image(imgPinguim, 0, 0, this.largura, this.altura);
         pop();
     }
 }
 
-// --- classe dos itens da esteira ---
 class ItemEsteira {
     constructor(tipo, ehAlvo) {
         this.tipo = tipo;
@@ -165,12 +222,16 @@ class ItemEsteira {
         this.ehAlvo = ehAlvo ? true : false;
         
         if (tipo === 'FRUTA' && this.nomeFruta) {
-            this.raio = MODELOS_FRUTA[this.nomeFruta]?.raio || 32; 
+            this.raio = MODELOS_FRUTA[this.nomeFruta]?.raio || 46; 
+        } else if (tipo === 'BIGORNA') {
+            this.raio = 52; 
+        } else if (tipo === 'BOMBA') {
+            this.raio = 45; 
         } else {
             this.raio = 32;
         }
 
-        this.esteiraY = height * 0.52;
+        this.esteiraY = height * 0.70;
         if (this.tipo === 'BIGORNA') {
             this.posicao = createVector(width + 50, height * 0.1); 
             this.velocidade = createVector(-jogo.velocidadeAtual * 0.6, 0); 
@@ -182,6 +243,7 @@ class ItemEsteira {
     }
 
     atualizar() {
+        this.esteiraY = height * 0.70;
         this.pulsacao += 0.15;
 
         if (this.tipo === 'BIGORNA') {
@@ -211,69 +273,53 @@ class ItemEsteira {
 
     desenhar() {
         push();
-        translate(this.posicao.x, this.posicao.y);
-        stroke('#10141d');
-        strokeWeight(4);
+        imageMode(CENTER);
+        
+        let ajustarY = (this.tipo === 'BIGORNA') ? -10 : -15;
+        translate(this.posicao.x, this.posicao.y + ajustarY);
 
         if (this.tipo === 'FRUTA' && this.nomeFruta) {
-            let informacao = MODELOS_FRUTA[this.nomeFruta];
-            
-            if (this.ehAlvo) {
+            let frutaAlvoAtual = (jogo.pedidoAtual && jogo.pedidoAtual.length > 0) ? jogo.pedidoAtual[0] : null;
+            // os contornos vao funcionar apenas no modo vitamina, desativando-os por completo no modo sobrevivência
+            let deveTerContorno = (jogo.modo === 'VITAMINA' && this.nomeFruta === frutaAlvoAtual);
+
+            if (deveTerContorno) {
                 push();
                 noFill();
-                stroke(255);
-                strokeWeight(6 + sin(this.pulsacao) * 3);
-                ellipse(0, -this.raio/2, this.raio * 2.3);
+                stroke('#FFF7E8');
+                strokeWeight(4 + sin(this.pulsacao) * 2);
+                ellipse(0, 0, this.raio * 2.3);
                 pop();
             }
-
-            fill(informacao.cor);
-            if (informacao.tipo === 'morango') {
-                triangle(-this.raio, -this.raio*1.2, this.raio, -this.raio*1.2, 0, 5);
-                fill(informacao.corFolha); ellipse(0, -this.raio*1.2, this.raio*1.2, 12);
-            } else if (informacao.tipo === 'banana') {
-                arc(0, -this.raio/2, this.raio * 2, this.raio * 1.3, 0, PI, OPEN);
-            } else if (informacao.tipo === 'uva') {
-                ellipse(-10, -18, 22); ellipse(10, -18, 22);
-                ellipse(0, -10, 24);  ellipse(0, 0, 20);
-            } else {
-                ellipse(0, -this.raio/2, this.raio * 2, this.raio * 1.9);
-                fill(informacao.corFolha); rect(-3, -this.raio - 8, 6, 10);
-            }
+            image(imgsFrutas[this.nomeFruta], 0, 0, this.raio * 2, this.raio * 2);
         }
         else if (this.tipo === 'BOMBA') {
-            fill('#222222'); ellipse(0, -20, 56);
-            fill('#e74c3c'); rect(-5, -50, 10, 6);
-            stroke('#f1c40f'); strokeWeight(3); line(0, -50, 12, -62);
+            image(imgBomba, 0, 0, this.raio * 2.2, this.raio * 2.2);
         }
         else if (this.tipo === 'BIGORNA') {
-            fill('#555555');
-            rectMode(CENTER);
-            rect(0, 0, 75, 28, 4);
-            quad(-30, -14, 30, -14, 20, -40, -20, -40);
-            rect(0, -45, 90, 18, 2);
+            image(imgBigorna, 0, 0, this.raio * 2.2, this.raio * 1.8);
         }
         else if (this.tipo === 'RELOGIO') {
-            fill('#ffffff'); stroke('#f1c40f'); strokeWeight(5);
-            ellipse(0, -25, 48);
-            stroke(0); strokeWeight(2.5); line(0, -25, 0, -40); line(0, -25, 10, -25);
+            fill('#FFF7E8'); stroke('#6B4F3A'); strokeWeight(4);
+            ellipse(0, 0, 48);
+            stroke('#4A3526'); strokeWeight(3); line(0, 0, 0, -15); line(0, 0, 10, 0);
         }
         pop();
     }
 }
 
-// --- motor central do jogo ---
 class MotorJogo {
     constructor() {
         this.estado = 'MENU';
         this.modo = 'VITAMINA';
         this.pontuacao = 0;
         this.combo = 0;
-        this.vidas = 3;
+        this.vidas = 5; 
         this.tempoRestante = 88; 
         
         this.velocidadeBase = 5.5;
         this.velocidadeAtual = 5.5;
+        this.ganhoExtraMultiplicador = 0; 
         
         this.pinguim = null;
         this.itens = [];
@@ -281,29 +327,66 @@ class MotorJogo {
         this.pedidoAtual = [];
         this.temporizadorSurgimento = 0;
         this.botoes = [];
+        this.deslocamentoEsteira = 0; 
     }
 
     inicializar(modo) {
         this.modo = modo;
         this.pontuacao = 0;
         this.combo = 0;
-        this.vidas = 3;
+        this.vidas = 5; 
         this.tempoRestante = 88;
+        this.ganhoExtraMultiplicador = 0;
         this.velocidadeAtual = this.velocidadeBase;
         this.itens = [];
         this.particulas = [];
         this.pinguim = new Pinguim(); 
         this.gerarPedido();
+        
+        let espacamentoSpawn = 190;
+        let totalItensIniciais = ceil(width / espacamentoSpawn) + 1;
+        
+        for (let i = 0; i < totalItensIniciais; i++) {
+            let xInicial = 80 + (i * espacamentoSpawn);
+            if (xInicial > width + 100) break;
+
+            let item;
+            if (this.modo === 'VITAMINA') {
+                let alvo = this.pedidoAtual[0];
+                let criarCorreta = random(1) < 0.55;
+                item = new ItemEsteira('FRUTA', criarCorreta);
+                if (criarCorreta && alvo) {
+                    item.nomeFruta = alvo;
+                }
+            } else {
+                let aleatorio = random(1);
+                if (aleatorio < 0.15) {
+                    item = new ItemEsteira('BOMBA', false);
+                } else if (aleatorio < 0.30) {
+                    item = new ItemEsteira('BIGORNA', false);
+                } else {
+                    item = new ItemEsteira('FRUTA', false);
+                }
+            }
+            item.posicao.x = xInicial;
+            this.itens.push(item);
+        }
+
+        this.temporizadorSurgimento = 0;
         this.estado = 'JOGANDO';
+
+        if (musicaJogo && !musicaJogo.isPlaying()) {
+            musicaJogo.loop();
+            musicaJogo.setVolume(0.4);
+        }
     }
 
     atualizarVelocidadePorCombo() {
-        if (this.combo <= 5) {
-            this.velocidadeAtual = this.velocidadeBase;
-        } else if (this.combo <= 10) {
-            this.velocidadeAtual = this.velocidadeBase * 1.20; 
+        if (this.combo >= 4) {
+            let fatorProgresso = (this.combo - 3) * 1.15; 
+            this.velocidadeAtual = this.velocidadeBase + fatorProgresso + this.ganhoExtraMultiplicador;
         } else {
-            this.velocidadeAtual = this.velocidadeBase * 1.45; 
+            this.velocidadeAtual = this.velocidadeBase + this.ganhoExtraMultiplicador;
         }
     }
     
@@ -350,6 +433,8 @@ class MotorJogo {
         if (this.estado !== 'JOGANDO') return;
 
         this.pinguim.atualizar();
+        
+        this.deslocamentoEsteira = (this.deslocamentoEsteira + this.velocidadeAtual) % 40;
 
         if (this.modo === 'VITAMINA' && frameCount % 60 === 0) {
             this.tempoRestante--;
@@ -357,19 +442,17 @@ class MotorJogo {
         }
 
         this.temporizadorSurgimento++;
-        let taxaSurgimentoAtual = max(45 - floor(this.velocidadeAtual * 2), 20);
+        let taxaSurgimentoAtual = max(45 - floor(this.velocidadeAtual * 2), 16);
         if (this.temporizadorSurgimento > taxaSurgimentoAtual) {
             this.temporizadorSurgimento = 0;
             this.gerenciadorSurgimento();
         }
 
-        // aualiza partículas de suco
         for (let i = this.particulas.length - 1; i >= 0; i--) {
             this.particulas[i].atualizar();
             if (this.particulas[i].alfa <= 0) { this.particulas.splice(i, 1); }
         }
 
-        // --- loop de colisão centralizado ---
         let colidiuComItemNesseFrame = false;
 
         for (let i = this.itens.length - 1; i >= 0; i--) {
@@ -381,16 +464,16 @@ class MotorJogo {
                 continue;
             }
 
-            let d = dist(this.pinguim.posicao.x, this.pinguim.posicao.y - 35, item.posicao.x, item.posicao.y - 15);
+            let ajustarY = (item.tipo === 'BIGORNA') ? -10 : -15;
+            let d = dist(this.pinguim.posicao.x, this.pinguim.posicao.y - (this.pinguim.altura / 2), item.posicao.x, item.posicao.y + ajustarY);
             
-            if (d < (item.raio + 35)) {
+            if (d < (item.raio + this.pinguim.raioHitbox)) {
                 this.dispararColisao(item);
                 this.itens.splice(i, 1);
                 colidiuComItemNesseFrame = true; 
             }
         }
 
-        // vê se o pinguim caiu na esteira sem rebater em nada
         if (!colidiuComItemNesseFrame && this.pinguim.posicao.y >= this.pinguim.esteiraY) {
             this.pinguim.forcarQuiqueEsteira();
             this.lidarFalhaChao();
@@ -399,22 +482,21 @@ class MotorJogo {
 
     lidarFalhaChao() {
         this.combo = 0;
+        this.ganhoExtraMultiplicador = 0; 
         this.atualizarVelocidadePorCombo(); 
         
-        if (this.modo === 'SOBREVIVENCIA') {
-            this.vidas--;
-            if (this.vidas <= 0) { this.estado = 'FIM_DE_JOGO'; }
-        } else {
-            this.tempoRestante = max(0, this.tempoRestante - 15); 
+        this.vidas--;
+        if (this.vidas <= 0) { 
+            this.estado = 'FIM_DE_JOGO'; 
         }
     }
 
     dispararColisao(item) {
         if (item.tipo === 'FRUTA') {
             let informacao = MODELOS_FRUTA[item.nomeFruta];
-            
+            let ajustarY = -15;
             for (let p = 0; p < 18; p++) {
-                this.particulas.push(new ParticulaSuco(item.posicao.x, item.posicao.y - 15, informacao.cor));
+                this.particulas.push(new ParticulaSuco(item.posicao.x, item.posicao.y + ajustarY, informacao.cor));
             }
 
             this.pinguim.pular(); 
@@ -422,6 +504,11 @@ class MotorJogo {
             if (this.modo === 'VITAMINA') {
                 if (item.nomeFruta === this.pedidoAtual[0]) {
                     this.combo++;
+                    
+                    if (this.combo % 5 === 0) {
+                        this.ganhoExtraMultiplicador += 2.0;
+                    }
+                    
                     this.atualizarVelocidadePorCombo();
                     this.pontuacao += min(this.combo, 5) * 10;
                     this.pedidoAtual.shift();
@@ -432,12 +519,20 @@ class MotorJogo {
                     }
                 } else {
                     this.combo = 0;
+                    this.ganhoExtraMultiplicador = 0; 
                     this.atualizarVelocidadePorCombo();
                     this.pinguim.temporizadorAtordoado = 25; 
                     this.pinguim.tipoErroAtual = "FRUTA_ERRADA";
+                    this.vidas--;
+                    if (this.vidas <= 0) { this.estado = 'FIM_DE_JOGO'; }
                 }
             } else {
                 this.combo++;
+                
+                if (this.combo % 5 === 0) {
+                    this.ganhoExtraMultiplicador += 2.0;
+                }
+                
                 this.atualizarVelocidadePorCombo();
                 this.pontuacao += min(this.combo, 5) * 10;
                 if (this.combo % 4 === 0 && this.vidas < 5) { this.vidas++; }
@@ -445,16 +540,15 @@ class MotorJogo {
         } 
         else if (item.tipo === 'BOMBA' || item.tipo === 'BIGORNA') {
             this.combo = 0;
+            this.ganhoExtraMultiplicador = 0; 
             this.atualizarVelocidadePorCombo();
             this.pinguim.temporizadorAtordoado = 40;
             this.pinguim.tipoErroAtual = "OBSTACULO";
             this.pinguim.velocidade.y = -8; 
 
-            if (this.modo === 'SOBREVIVENCIA') {
-                this.vidas--;
-                if (this.vidas <= 0) { this.estado = 'FIM_DE_JOGO'; }
-            } else {
-                this.tempoRestante = max(0, this.tempoRestante - 10);
+            this.vidas--;
+            if (this.vidas <= 0) { 
+                this.estado = 'FIM_DE_JOGO'; 
             }
         } 
         else if (item.tipo === 'RELOGIO') {
@@ -464,32 +558,17 @@ class MotorJogo {
     }
 
     renderizar() {
-        background('#d35400');
-        fill('#ba4a00'); noStroke(); rect(0, height * 0.4, width, height * 0.6);
-        stroke('#a04000'); strokeWeight(4);
-        for (let x = 40; x < width; x += 120) { line(x, 0, x, height * 0.4); }
-
-        stroke('#10141d'); strokeWeight(5); fill('#2980b9');
-        rect(-10, -10, 75, height * 0.35, 0, 0, 15, 0); 
-        fill('#3498db'); rect(width - 65, -10, 75, height * 0.35, 0, 0, 0, 15);
-
-        stroke('#2c3e50'); strokeWeight(2); line(width*0.2, 0, width*0.2, 50); line(width*0.8, 0, width*0.8, 50);
-        stroke('#10141d'); strokeWeight(4); fill('#f39c12'); ellipse(width*0.2, 75, 45, 45); ellipse(width*0.8, 75, 45, 45);
-
-        rectMode(CORNER);
-        fill('#4b5563'); stroke('#10141d'); strokeWeight(6);
-        rect(-10, height * 0.52, width + 20, 45); 
-        fill('#1f2937'); noStroke();
-        rect(0, height * 0.53, width, 30);
-        
-        stroke('#374151'); strokeWeight(6);
-        let deslocamentoX = (millis() * (this.velocidadeAtual / 15)) % 60;
-        for (let x = width + 60 - deslocamentoX; x > -60; x -= 60) {
-            line(x, height * 0.53, x - 15, height * 0.57);
+        if (imgWallpaper) {
+            push();
+            imageMode(CENTER);
+            let escala = max(width / imgWallpaper.width, height / imgWallpaper.height);
+            image(imgWallpaper, width / 2, height / 2, imgWallpaper.width * escala, imgWallpaper.height * escala);
+            pop();
+        } else {
+            background('#d35400');
         }
 
-        this.desenharCesta(95, height * 0.48);
-        this.desenharCesta(width - 130, height * 0.48);
+        this.desenharEsteiraRealista();
 
         if (this.estado === 'JOGANDO') {
             this.itens.forEach(item => item.desenhar());
@@ -501,146 +580,189 @@ class MotorJogo {
         else if (this.estado === 'FIM_DE_JOGO') { this.renderizarFimJogo(); }
     }
 
-    desenharCesta(x, y) {
-        push(); translate(x, y); stroke('#10141d'); strokeWeight(3.5); fill('#d35400'); ellipse(0, -25, 50, 20);
-        fill('#e67e22'); arc(0, -10, 60, 40, 0, PI, CHORD); pop();
+    desenharEsteiraRealista() {
+        let eY = height * 0.70;
+        push();
+        rectMode(CORNER);
+        
+        fill('#2c3e50'); stroke('#1a252f'); strokeWeight(3);
+        rect(-10, eY - 4, width + 20, 38, 6);
+        
+        fill('#242424'); noStroke();
+        rect(0, eY, width, 25);
+        
+        stroke('#3a3a3a'); strokeWeight(4);
+        for (let x = -40; x < width + 40; x += 40) {
+            let posX = x - this.deslocamentoEsteira;
+            line(posX, eY, posX, eY + 24);
+        }
+        
+        fill('#7f8c8d'); stroke('#95a5a6'); strokeWeight(2);
+        rect(-10, eY + 20, width + 20, 10);
+        fill('#bdc3c7'); noStroke();
+        rect(-10, eY + 20, width + 20, 3);
+        
+        fill('#7f8c8d'); stroke('#34495e'); strokeWeight(1);
+        for (let r = 20; r < width; r += 160) {
+            ellipse(r, eY + 25, 6, 6);
+        }
+        pop();
     }
 
     desenharInterface() {
         push();
         translate(width / 2, 60);
-        rectMode(CENTER); stroke('#4a2711'); strokeWeight(6); fill('#874c24'); rect(0, 0, 160, 65, 10);
-        stroke('#10141d'); strokeWeight(3); fill('#f5f6fa'); rect(0, 0, 140, 48, 6);
-        
+        rectMode(CENTER); stroke('#6B4F3A'); strokeWeight(5); fill('#FFF7E8'); rect(0, 0, 180, 60, 10);
         let m = floor(this.tempoRestante / 60); let s = this.tempoRestante % 60;
         let textoRelogio = this.modo === 'VITAMINA' ? `${m}:${s < 10 ? '0' : ''}${s}` : "∞";
-        fill('#2f3640'); textStyle(BOLD); textSize(26); textAlign(CENTER, CENTER);
-        text(textoRelogio, 0, 2);
+        desenharTexto(textoRelogio, 0, 2, 34);
         pop();
 
-        let painelY = height - 100;
-        push(); translate(width - 240, painelY);
-        noFill(); stroke('#1f2937'); strokeWeight(20); arc(100, 50, 120, 120, PI, TWO_PI);
-        let cores = ['#2ecc71', '#2ecc71', '#f1c40f', '#f39c12', '#e67e22', '#e74c3c'];
-        stroke(cores[min(this.combo, 5)]);
-        arc(100, 50, 120, 120, PI, PI + (TWO_PI - PI) * (min(this.combo, 5) / 5));
-        rectMode(CENTER); noStroke(); fill('#10141d'); rect(100, 50, 40, 30, 4);
-        fill(255); textSize(16); textAlign(CENTER, CENTER); text(`${this.combo}x`, 100, 50);
+        let painelY = height - 140;
+        push(); translate(width - 280, painelY);
+        noFill(); stroke('#4A3526'); strokeWeight(20); arc(100, 50, 130, 130, PI, TWO_PI);
+        stroke('#e67e22');
+        arc(100, 50, 130, 130, PI, PI + (TWO_PI - PI) * (min(this.combo, 5) / 5));
         pop();
+        desenharTexto(`${this.combo}x`, width - 180, painelY + 45, 28);
 
-        fill('#5c3a21'); stroke('#10141d'); strokeWeight(4); rect(40, height - 85, 180, 55, 8);
-        fill(255); noStroke(); textSize(18); textAlign(CENTER, CENTER); text(`PONTOS: ${this.pontuacao}`, 130, height - 58);
+        push();
+        rectMode(CORNER); fill('#6B4F3A'); stroke('#4A3526'); strokeWeight(3); rect(40, height - 115, 260, 70, 8);
+        pop();
+        desenharTexto(`PONTOS: ${this.pontuacao}`, 170, height - 80, 28);
 
-        if (this.modo === 'SOBREVIVENCIA') {
-            for (let i = 0; i < 5; i++) {
-                fill(i < this.vidas ? '#e74c3c' : '#bdc3c7');
-                ellipse(45 + (i * 26), 40, 18, 18);
+        // corações2, vou ajustar mais tarde pq fiz a funçao
+        for (let i = 0; i < 5; i++) {
+            if (i < this.vidas) {
+                fill('#ff2a4b'); 
+            } else {
+                fill('#6B4F3A'); 
             }
+            stroke('#4A3526'); 
+            strokeWeight(2.5);
+            desenharCoracao(55 + (i * 38), 46, 24);
         }
 
         if (this.modo === 'VITAMINA' && this.pedidoAtual.length > 0) {
-            let larguraBandeja = this.pedidoAtual.length * 65 + 40;
+            let larguraBandeja = this.pedidoAtual.length * 115 + 60;
             let bandejaX = width / 2 - larguraBandeja / 2;
-            fill('#eed9c4'); stroke('#5c3a21'); strokeWeight(5); rect(bandejaX, height - 95, larguraBandeja, 75, 12);
+            push();
+            fill('#FFF7E8'); stroke('#6B4F3A'); strokeWeight(5); rect(bandejaX, height - 165, larguraBandeja, 135, 12);
+            pop();
 
             for (let i = 0; i < this.pedidoAtual.length; i++) {
                 let nomeF = this.pedidoAtual[i];
-                let cartaoX = bandejaX + 35 + (i * 65);
-                let cartaoY = height - 58;
+                let cartaoX = bandejaX + 65 + (i * 115);
+                let cartaoY = height - 98;
 
+                push();
+                imageMode(CENTER);
                 if (i === 0) {
-                    stroke('#f1c40f'); strokeWeight(4); fill('#ffffff');
-                    rectMode(CENTER); rect(cartaoX, cartaoY - 10, 52, 58, 5); 
+                    stroke('#e67e22'); strokeWeight(4); fill('#FFF7E8');
+                    rectMode(CENTER); rect(cartaoX, cartaoY - 8, 95, 100, 8); 
+                    image(imgsFrutas[nomeF], cartaoX, cartaoY - 8, 74, 74);
                 } else {
-                    stroke('#10141d'); strokeWeight(2); fill('#f5f6fa');
-                    rectMode(CENTER); rect(cartaoX, cartaoY, 46, 50, 5);
+                    stroke('#6B4F3A'); strokeWeight(2); fill('#FFF7E8');
+                    rectMode(CENTER); rect(cartaoX, cartaoY, 82, 85, 8);
+                    image(imgsFrutas[nomeF], cartaoX, cartaoY, 58, 58);
                 }
-                noStroke(); fill(MODELOS_FRUTA[nomeF].cor);
-                ellipse(cartaoX, i === 0 ? cartaoY - 10 : cartaoY, 26);
+                pop();
             }
         }
 
         if (this.pinguim.temporizadorAtordoado > 0) {
-            let msg = "ERRO DE RECEITA! FRUTA ERRADA!";
-            let corPainel = 'rgba(231, 76, 60, 0.85)';
+            let msg = "RECEITA INCORRETA!";
+            if (this.pinguim.tipoErroAtual === "ESTEIRA") msg = "CUIDADO COM A ESTEIRA!";
+            else if (this.pinguim.tipoErroAtual === "OBSTACULO") msg = "CUIDADO COM OS OBSTÁCULOS!";
+            else if (this.pinguim.tipoErroAtual === "FRUTA_ERRADA") msg = "FRUTA ERRADA!";
             
-            if (this.pinguim.tipoErroAtual === "ESTEIRA") {
-                msg = "QUEDA DA ESTEIRA! RESET DE COMBO!";
-                corPainel = 'rgba(192, 57, 43, 0.9)';
-            } else if (this.pinguim.tipoErroAtual === "OBSTACULO") {
-                msg = "CUIDADO COM OS OBSTÁCULOS!";
-                corPainel = 'rgba(211, 84, 0, 0.85)';
-            }
-            
-            fill(corPainel); rect(0, height / 2 - 40, width, 80);
-            fill('#ffffff'); textSize(28); textAlign(CENTER, CENTER); textStyle(BOLD);
-            text(msg, width / 2, height / 2);
+            push();
+            fill('rgba(74, 53, 38, 0.9)'); 
+            rectMode(CENTER);
+            rect(width / 2, 140, width * 0.5, 60, 10);
+            pop();
+            desenharTexto(msg, width / 2, 140, 30);
         }
     }
 
     renderizarMenu() {
-        fill('rgba(16, 20, 29, 0.8)'); rect(0, 0, width, height);
-        textAlign(CENTER, CENTER); textStyle(BOLD); fill('#f1c40f'); textSize(60);
-        text("ESMAGA FRUTA", width / 2, height * 0.25);
-        fill(255); textSize(18); textStyle(ITALIC); text("Regras Avançadas: O chão é lava! Use as frutas como plataformas.", width / 2, height * 0.33);
+        push();
+        fill('rgba(74, 53, 38, 0.6)'); rect(0, 0, width, height);
+        pop();
+        
+        desenharTexto("Esmaga Fruta", width / 2, height * 0.20, 84);
+        desenharTexto("PjBL 2 - Web Development: Canvas & Games", width / 2, height * 0.30, 26);
 
+        // botões principais e tamanhos
         this.botoes = [
-            { id: 'VITAMINA', texto: 'Modo Vitamina (Smoothies)', x: width/2 - 175, y: height*0.46, w: 350, h: 55 },
-            { id: 'SOBREVIVENCIA', texto: 'Modo Frutada (Sobrevivência)', x: width/2 - 175, y: height*0.58, w: 350, h: 55 },
-            { id: 'SOBRE', texto: 'Créditos / Integrantes', x: width/2 - 175, y: height*0.70, w: 350, h: 55 }
+            { id: 'VITAMINA', texto: 'Modo Vitamina (Smoothies)', x: width/2 - 290, y: height*0.42, w: 580, h: 86 },
+            { id: 'SOBREVIVENCIA', texto: 'Modo Frutada (Sobrevivência)', x: width/2 - 290, y: height*0.56, w: 580, h: 86 },
+            { id: 'SOBRE', texto: 'Regras', x: width/2 - 290, y: height*0.70, w: 580, h: 86 }
         ];
         this.desenharBotoesInterface();
     }
 
     renderizarSobre() {
-        fill('rgba(16, 20, 29, 0.92)'); rect(0, 0, width, height);
-        textAlign(CENTER, CENTER); fill(255); textSize(32); textStyle(BOLD);
-        text("REGRAS DA FÁBRICA DE SMOOTHIES", width / 2, height * 0.16);
-        textSize(18); textStyle(NORMAL);
+        push();
+        fill('rgba(42, 29, 20, 0.95)'); rect(0, 0, width, height);
+        pop();
+        
+        desenharTexto("MANUAL DO ESMAGA FRUTA", width / 2, height * 0.14, 48);
         
         let linhas = [
-            "Controles e Mecânicas:",
-            "• [Seta para Cima / W]: Segure no ar para planar",
-            "• [Seta para Baixo / S]: Pressione no ar para descer com velocidade",
+            "Controles do Pinguim:",
+            "• [Seta para Cima / W]: Planar suavemente no ar",
+            "• [Seta para Baixo / S]: Queda rápida estratégica",
             "• [Setas Laterais / A, D]: Movimentação horizontal",
-            "PROIBIDO TOCAR NA ESTEIRA! Pular diretamente nela reseta combo e tira vida.",
-            "Apenas frutas servem como plataformas seguras de rebatimento automático!",
+            "Atenção: Use as frutas como plataformas seguras de rebatimento!",
             "",
-            "Esmaga Fruta - Feito por:",
-            "Julia Ferreira Padilha :)"
+            "Tocar diretamente na esteira zera seu combo atual e faz você perder vida.",
+            "Evite as bombas e bigornas a todo custo, elas causam atordoamento e perda de vida.",
+            "No modo Vitamina, siga a receita exibida na bandeja inferior para ganhar pontos e aumentar seu combo.",
+            "No modo Frutada, sobreviva o máximo possível acumulando pontos e combos, sem um pedido específico.",
+            "",
+            "Desenvolvido por Julia Ferreira Padilha :)"
         ];
         
         for (let i = 0; i < linhas.length; i++) {
-            let l = linhas[i];
-            if (l.indexOf("PROIBIDO") !== -1) { fill('#e74c3c'); }
-            else if (l.indexOf("•") !== -1) { fill('#f1c40f'); }
-            else { fill(255); }
-            text(l, width / 2, height * 0.28 + (i * 32));
+            desenharTexto(linhas[i], width / 2, height * 0.26 + (i * 44), 26);
         }
 
-        this.botoes = [ { id: 'VOLTAR', texto: 'Voltar ao Menu', x: width/2 - 125, y: height*0.82, w: 250, h: 50 } ];
+        // botão de voltar reduzido mantendo a devida proporção
+        this.botoes = [ { id: 'VOLTAR', texto: 'Voltar ao Menu', x: width/2 - 232, y: height*0.84, w: 464, h: 81 } ];
         this.desenharBotoesInterface();
     }
 
     renderizarFimJogo() {
-        fill('rgba(0, 0, 0, 0.9)'); rect(0, 0, width, height);
-        textAlign(CENTER, CENTER); fill('#e74c3c'); textSize(60); textStyle(BOLD);
-        text("TURNO ENCERRADO!", width / 2, height * 0.35);
-        fill(255); textSize(24); textStyle(NORMAL); text("Pontos Finais Totais: " + this.pontuacao, width / 2, height * 0.48);
+        push();
+        fill('rgba(42, 29, 20, 0.9)'); rect(0, 0, width, height);
+        pop();
+        
+        desenharTexto("TURNO ENCERRADO!", width / 2, height * 0.35, 74);
+        desenharTexto("Pontos Conquistados: " + this.pontuacao, width / 2, height * 0.48, 38);
 
-        this.botoes = [ { id: 'VOLTAR', texto: 'Voltar ao Menu Principal', x: width/2 - 150, y: height*0.65, w: 300, h: 55 } ];
+        // botão de fim de jogo
+        this.botoes = [ { id: 'VOLTAR', texto: 'Voltar ao Menu', x: width/2 - 260, y: height*0.65, w: 520, h: 86 } ];
         this.desenharBotoesInterface();
     }
 
     desenharBotoesInterface() {
-        rectMode(CORNER); textStyle(BOLD); textSize(18);
+        push();
+        imageMode(CORNER);
         for (let i = 0; i < this.botoes.length; i++) {
             let b = this.botoes[i];
             let focoMouse = (mouseX > b.x && mouseX < b.x + b.w && mouseY > b.y && mouseY < b.y + b.h);
-            stroke('#ffffff'); strokeWeight(2.5); 
-            if (focoMouse) { fill('#e67e22'); } else { fill('#d35400'); }
-            rect(b.x, b.y, b.w, b.h, 8); noStroke(); fill(255); text(b.texto, b.x + b.w / 2, b.y + b.h / 2);
+            
+            if (focoMouse && tint) {
+                tint(240, 220, 200); 
+            } else if (tint) {
+                noTint();
+            }
+            
+            image(imgBotao, b.x, b.y, b.w, b.h);
+            desenharTexto(b.texto, b.x + b.w / 2, b.y + b.h / 2, 24);
         }
+        pop();
     }
 
     lidarCliqueMouse() {

@@ -83,20 +83,28 @@ function desenharCoracao(x, y, tamanho) {
     push();
     translate(x, y);
     
-    // metade esquerda do coração
-    beginShape();
-    vertex(0, -tamanho * 0.25);
-    bezierVertex(-tamanho * 0.5, -tamanho * 0.75, -tamanho, -tamanho * 0.25, -tamanho * 0.05, tamanho * 0.45);
-    vertex(0, tamanho * 0.55);
-    endShape(CLOSE);
+    noStroke(); 
+    for (let i = 0; i < 2; i++) {
+        beginShape();
+        vertex(0, -tamanho * 0.25);
+        bezierVertex(-tamanho * 0.5, -tamanho * 0.75, -tamanho, -tamanho * 0.25, -tamanho * 0.05, tamanho * 0.45);
+        vertex(0, tamanho * 0.55);
+        endShape(CLOSE);
+        scale(-1, 1);
+    }
     
-    // metade direita espelhada no eixo X
-    scale(-1, 1);
-    beginShape();
-    vertex(0, -tamanho * 0.25);
-    bezierVertex(-tamanho * 0.5, -tamanho * 0.75, -tamanho, -tamanho * 0.25, -tamanho * 0.05, tamanho * 0.45);
-    vertex(0, tamanho * 0.55);
-    endShape(CLOSE);
+    noFill();
+    stroke('#4A3526');
+    strokeWeight(2.5);
+    
+    for (let i = 0; i < 2; i++) {
+        beginShape();
+        vertex(0, -tamanho * 0.25);
+        bezierVertex(-tamanho * 0.5, -tamanho * 0.75, -tamanho, -tamanho * 0.25, -tamanho * 0.05, tamanho * 0.45);
+        vertex(0, tamanho * 0.55);
+        endShape();
+        scale(-1, 1);
+    }
     
     pop();
 }
@@ -631,7 +639,6 @@ class MotorJogo {
         pop();
         desenharTexto(`PONTOS: ${this.pontuacao}`, 170, height - 80, 28);
 
-        // corações2, vou ajustar mais tarde pq fiz a funçao
         for (let i = 0; i < 5; i++) {
             if (i < this.vidas) {
                 fill('#ff2a4b'); 
@@ -748,9 +755,10 @@ class MotorJogo {
 
     desenharBotoesInterface() {
         push();
-        imageMode(CORNER);
+        imageMode(CENTER);
         for (let i = 0; i < this.botoes.length; i++) {
             let b = this.botoes[i];
+            
             let focoMouse = (mouseX > b.x && mouseX < b.x + b.w && mouseY > b.y && mouseY < b.y + b.h);
             
             if (focoMouse && tint) {
@@ -759,8 +767,10 @@ class MotorJogo {
                 noTint();
             }
             
-            image(imgBotao, b.x, b.y, b.w, b.h);
-            desenharTexto(b.texto, b.x + b.w / 2, b.y + b.h / 2, 24);
+            let centroX = b.x + b.w / 2;
+            let centroY = b.y + b.h / 2;
+            image(imgBotao, centroX, centroY); 
+            desenharTexto(b.texto, centroX, centroY, 24);
         }
         pop();
     }

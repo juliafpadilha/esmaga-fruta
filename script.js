@@ -18,6 +18,11 @@ function preload() {
     imgBotao = loadImage('./src/botao_base.png');
     imgBomba = loadImage('./src/bomba.png');
     imgBigorna = loadImage('./src/bigorna.png');
+
+    musicaJogo = loadSound('./src/musica.mp3', 
+        () => console.log("Música carregada com sucesso!"), 
+        (err) => console.log("Aviso: Arquivo de música não encontrado em ./src/")
+    );
     
     if (typeof imgsFrutas === 'undefined' || imgsFrutas === null) {
         imgsFrutas = {};
